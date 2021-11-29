@@ -73,7 +73,7 @@ class Fixed implements Comparable<Fixed> {
   /// [scale] defaults to 2 if not passed.
   Fixed.fromBigInt(BigInt minorUnits, {this.scale = 2}) {
     _checkScale(scale);
-    value = Decimal.fromBigInt(minorUnits) / Decimal.ten.pow(scale);
+    value = Decimal.fromBigInt(minorUnits).shift(-scale);
   }
 
   /// Creates a fixed scale decimal from [amount] with
@@ -84,7 +84,7 @@ class Fixed implements Comparable<Fixed> {
     _checkScale(scale);
     value = _rescale(
       amount,
-      existingScale: amount.hasFinitePrecision ? amount.scale : null,
+      existingScale: amount.scale,
       targetScale: scale,
     );
   }
@@ -101,7 +101,7 @@ class Fixed implements Comparable<Fixed> {
   /// ```
   Fixed.fromInt(int minorUnits, {this.scale = 2}) {
     _checkScale(scale);
-    value = Decimal.fromInt(minorUnits) / Decimal.ten.pow(scale);
+    value = Decimal.fromInt(minorUnits).shift(-scale);
   }
 
   /// Creates a Fixed scale value from a double
@@ -215,8 +215,11 @@ class Fixed implements Comparable<Fixed> {
   /// Returns this / [divisor]
   ///
   /// The scale is the largest of the two [scale]s.
-  Fixed operator /(Fixed divisor) => Fixed.fromDecimal(value / divisor.value,
-      scale: max(scale, divisor.scale));
+  Fixed operator /(Fixed divisor) => Fixed.fromDecimal(
+        (value / divisor.value)
+            .toDecimal(scaleOnInfinitePrecision: max(scale, divisor.scale)),
+        scale: max(scale, divisor.scale),
+      );
 
   /// less than operator
   bool operator <(Fixed other) => value < other.value;
@@ -335,7 +338,7 @@ class Fixed implements Comparable<Fixed> {
   Decimal toDecimal() => value;
 
   /// Truncates this and returns the integer part.
-  int toInt() => value.toInt();
+  int toInt() => value.toBigInt().toInt();
 
   /// Returns the [Fixed] value using [scale] to control the
   /// displayed number of decimal places.
@@ -365,8 +368,10 @@ class Fixed implements Comparable<Fixed> {
   /// This is a truncating division operator.
   ///
   /// The scale is the largest of the two [scale]s.
-  Fixed operator ~/(Fixed divisor) => Fixed.fromDecimal(value ~/ divisor.value,
-      scale: max(scale, divisor.scale));
+  Fixed operator ~/(Fixed divisor) => Fixed.fromDecimal(
+        (value ~/ divisor.value).toDecimal(),
+        scale: max(scale, divisor.scale),
+      );
 
   List<Fixed> _doAllocationAccordingTo(List<BigInt> ratios) {
     final totalVolume = ratios.reduce((a, b) => a + b);
@@ -473,12 +478,11 @@ class Fixed implements Comparable<Fixed> {
       // no precision lost
       return value;
     }
-    if (value.hasFinitePrecision && value.scale <= targetScale) {
+    if (value.scale <= targetScale) {
       // no precision lost
       return value;
     }
-    var coef = Decimal.ten.pow(targetScale);
-    return (value * coef).round() / coef;
+    return value.round(scale: targetScale);
   }
 }
 

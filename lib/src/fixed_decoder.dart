@@ -79,7 +79,7 @@ class FixedDecoder {
     }
 
     final value = Decimal.fromBigInt(majorUnits) +
-        Decimal.fromBigInt(minorUnits) / Decimal.ten.pow(scale);
+        Decimal.fromBigInt(minorUnits).shift(-scale);
     return isNegative ? -value : value;
   }
 
